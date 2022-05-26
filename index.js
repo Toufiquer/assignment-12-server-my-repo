@@ -34,9 +34,45 @@ const client = new MongoClient(uri, {
 app.get("/", (req, res) => {
     res.send("Node is working.");
 });
+
+const userCollection = client.db("userCollection").collection("user");
 async function runServer() {
     try {
         await client.connect();
+
+        // add User in db create jwt token
+        app.put("/user", async (req, res) => {
+            const name = req.body.name;
+            const email = req.body.email;
+            const user = { name, email };
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updateDoc = { $set: user };
+            const result = await userCollection.updateOne(
+                filter,
+                updateDoc,
+                options
+            );
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
+                expiresIn: "1h",
+            });
+            res.send({ result, token });
+        });
+
+        // Check user role
+        app.get("/user", async (req, res) => {
+            const result = await userCollection.findOne({
+                email: req.query.email,
+            });
+            const role = result?.role;
+            if (role === "admin") {
+                return res.send({ result: true });
+            } else {
+                return res
+                    .status(403)
+                    .send({ result: false, message: "Forbidden Access" });
+            }
+        });
     } finally {
     }
 }
