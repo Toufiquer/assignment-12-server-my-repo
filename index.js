@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3500;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 // Middle were;
 app.use(express.json());
 app.use(cors());
@@ -36,6 +36,9 @@ app.get("/", (req, res) => {
 });
 
 const userCollection = client.db("userCollection").collection("user");
+const productsCollection = client
+    .db("productsCollection")
+    .collection("products");
 async function runServer() {
     try {
         await client.connect();
@@ -44,10 +47,18 @@ async function runServer() {
         app.put("/user", async (req, res) => {
             const name = req.body.name;
             const email = req.body.email;
-            const user = { name, email };
+            let user = { name, email };
             const filter = { email: email };
-            const options = { upsert: true };
+            const exist = await userCollection.findOne(filter);
+            // console.log(exist);
+            if (exist) {
+                user.role = exist.role;
+            } else {
+                user.role = "client";
+            }
+            // console.log(user, exist);
             const updateDoc = { $set: user };
+            const options = { upsert: true };
             const result = await userCollection.updateOne(
                 filter,
                 updateDoc,
@@ -72,6 +83,41 @@ async function runServer() {
                     .status(403)
                     .send({ result: false, message: "Forbidden Access" });
             }
+        });
+
+        //  Create a new Product
+        app.post("/addProduct", async (req, res) => {
+            const product = req.body;
+            const result = await productsCollection.insertOne(product);
+            res.send(result);
+        });
+
+        //  Get all Products
+        app.get("/allProducts", async (req, res) => {
+            const result = await productsCollection.find().toArray();
+            res.send(result);
+        });
+        // Update a Product
+        app.put("/updateProduct", async (req, res) => {
+            const product = req.body;
+            const filter = { email: product.email };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: product,
+            };
+            const result = await productsCollection.updateOne(
+                filter,
+                updateDoc,
+                options
+            );
+            res.send(result);
+        });
+        // Delete a Product
+        app.delete("/deleteProduct", async (req, res) => {
+            const id = req.body;
+            const query = { _id: ObjectId(id) };
+            const result = await productsCollection.deleteOne(query);
+            res.send(result);
         });
     } finally {
     }
