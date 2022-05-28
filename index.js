@@ -54,7 +54,7 @@ async function runServer() {
             if (exist) {
                 user.role = exist.role;
             } else {
-                user.role = "client";
+                user.role = "Client";
             }
             // console.log(user, exist);
             const updateDoc = { $set: user };
