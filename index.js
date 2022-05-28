@@ -119,10 +119,13 @@ async function runServer() {
             const result = await productsCollection.find().toArray();
             res.send(result);
         });
+
         // Update a Product
         app.put("/updateProduct", async (req, res) => {
             const product = req.body;
-            const filter = { email: product.email };
+            const id = req.query.id;
+            console.log(id);
+            const filter = { _id: ObjectId(id) };
             const options = { upsert: true };
             const updateDoc = {
                 $set: product,
@@ -132,7 +135,8 @@ async function runServer() {
                 updateDoc,
                 options
             );
-            res.send(result);
+            console.log(result);
+            res.send({ result });
         });
         // Delete a Product
         app.delete("/deleteProduct", async (req, res) => {
