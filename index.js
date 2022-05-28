@@ -73,7 +73,7 @@ async function runServer() {
         // Update User role
         app.put("/updateUser", async (req, res) => {
             const user = req.body;
-            console.log(user);
+            // console.log(user);
             const filter = { email: user.email };
             const updateDoc = { $set: user };
             const options = { upsert: true };
@@ -85,8 +85,8 @@ async function runServer() {
             res.send({ result });
         });
 
-        // Find User Role
-        app.get("/userRole", async (req, res) => {
+        // Find User
+        app.get("/user", async (req, res) => {
             const email = req.query.email;
             const filter = { email: email };
             const result = await userCollection.findOne(filter);
@@ -102,20 +102,6 @@ async function runServer() {
             res.send({ result });
         });
 
-        // Check user role
-        app.get("/user", async (req, res) => {
-            const result = await userCollection.findOne({
-                email: req.query.email,
-            });
-            const role = result?.role;
-            if (role === "admin") {
-                return res.send({ result: true });
-            } else {
-                return res
-                    .status(403)
-                    .send({ result: false, message: "Forbidden Access" });
-            }
-        });
         app.get("/allUsers", async (req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result);
