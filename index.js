@@ -84,6 +84,15 @@ async function runServer() {
             );
             res.send({ result });
         });
+
+        // Find User Role
+        app.get("/userRole", async (req, res) => {
+            const email = req.query.email;
+            const filter = { email: email };
+            const result = await userCollection.findOne(filter);
+            res.send({ result });
+        });
+
         // Delete User
         app.delete("/deleteUser", async (req, res) => {
             const user = req.body;
