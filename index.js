@@ -43,7 +43,7 @@ async function runServer() {
     try {
         await client.connect();
 
-        // add User in db create jwt token
+        // add User in db and create jwt token
         app.put("/user", async (req, res) => {
             const name = req.body.name;
             const email = req.body.email;
@@ -70,6 +70,29 @@ async function runServer() {
             res.send({ result, token });
         });
 
+        // Update User role
+        app.put("/updateUser", async (req, res) => {
+            const user = req.body;
+            console.log(user);
+            const filter = { email: user.email };
+            const updateDoc = { $set: user };
+            const options = { upsert: true };
+            const result = await userCollection.updateOne(
+                filter,
+                updateDoc,
+                options
+            );
+            res.send({ result });
+        });
+        // Delete User
+        app.delete("/deleteUser", async (req, res) => {
+            const user = req.body;
+            console.log(user);
+            const filter = { email: user.email };
+            const result = await userCollection.deleteOne(filter);
+            res.send({ result });
+        });
+
         // Check user role
         app.get("/user", async (req, res) => {
             const result = await userCollection.findOne({
@@ -83,6 +106,10 @@ async function runServer() {
                     .status(403)
                     .send({ result: false, message: "Forbidden Access" });
             }
+        });
+        app.get("/allUsers", async (req, res) => {
+            const result = await userCollection.find().toArray();
+            res.send(result);
         });
 
         //  Create a new Product
@@ -117,6 +144,13 @@ async function runServer() {
             const id = req.body;
             const query = { _id: ObjectId(id) };
             const result = await productsCollection.deleteOne(query);
+            res.send(result);
+        });
+        // Get a Product
+        app.get("/product", async (req, res) => {
+            const id = req.query.id;
+            const query = { _id: ObjectId(id) };
+            const result = await productsCollection.findOne(query);
             res.send(result);
         });
     } finally {
