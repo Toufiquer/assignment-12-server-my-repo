@@ -97,7 +97,7 @@ async function runServer() {
         // Delete User
         app.delete("/deleteUser", async (req, res) => {
             const user = req.body;
-            console.log(user);
+            // console.log(user);
             const filter = { email: user.email };
             const result = await userCollection.deleteOne(filter);
             res.send({ result });
@@ -125,7 +125,7 @@ async function runServer() {
         app.put("/updateProduct", async (req, res) => {
             const product = req.body;
             const id = req.query.id;
-            console.log(id);
+            // console.log(id);
             const filter = { _id: ObjectId(id) };
             const options = { upsert: true };
             const updateDoc = {
@@ -136,7 +136,7 @@ async function runServer() {
                 updateDoc,
                 options
             );
-            console.log(result);
+            // console.log(result);
             res.send({ result });
         });
         // Delete a Product
@@ -166,6 +166,23 @@ async function runServer() {
                 const result = await ordersCollection.insertOne(order);
                 return res.send({ success: true, result });
             }
+        });
+
+        // Find All Orders for client
+        app.get("/clientAllOrders", async (req, res) => {
+            const email = req.query.email;
+            if (email) {
+                const query = { email: email };
+                const result = await ordersCollection.find(query).toArray();
+                // console.log(result);
+                res.send(result);
+            }
+        });
+
+        // Find All Orders for client
+        app.get("/adminAllOrders", async (req, res) => {
+            const result = await ordersCollection.find().toArray();
+            res.send(result);
         });
     } finally {
     }
