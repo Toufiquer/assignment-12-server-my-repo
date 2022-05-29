@@ -39,6 +39,7 @@ const userCollection = client.db("userCollection").collection("user");
 const productsCollection = client
     .db("productsCollection")
     .collection("products");
+const ordersCollection = client.db("ordersCollection").collection("orders");
 async function runServer() {
     try {
         await client.connect();
@@ -151,6 +152,20 @@ async function runServer() {
             const query = { _id: ObjectId(id) };
             const result = await productsCollection.findOne(query);
             res.send(result);
+        });
+
+        // Save Orders
+        app.post("/addOrder", async (req, res) => {
+            const order = req.body;
+            const id = order.ProductId;
+            const query = { email: order.email, ProductId: id };
+            const exists = await ordersCollection.findOne(query);
+            if (exists) {
+                return res.send({ success: false, exists: exists });
+            } else {
+                const result = await ordersCollection.insertOne(order);
+                return res.send({ success: true, result });
+            }
         });
     } finally {
     }
