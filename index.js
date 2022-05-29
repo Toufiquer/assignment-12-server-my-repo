@@ -9,20 +9,20 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 app.use(express.json());
 app.use(cors());
 
-// const verifyJWT = (req, res, next) => {
-//     const authHeader = req.headers.authorization;
-//     if (!authHeader) {
-//         return res.status(401).send({ message: "UnAuthorized Access" });
-//     }
-//     const token = authHeader.split(" ")[1];
-//     jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
-//         if (err) {
-//             return res.status(403).send({ message: "Forbidden Access" });
-//         }
-//         req.decoded = decoded;
-//         next();
-//     });
-// };
+const verifyJWT = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: "UnAuthorized Access" });
+    }
+    const token = authHeader.split(" ")[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: "Forbidden Access" });
+        }
+        req.decoded = decoded;
+        next();
+    });
+};
 
 const uri = `mongodb+srv://${process.env.APP_USER}:${process.env.APP_PASSWORD}@cluster0.mufjr.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
@@ -44,6 +44,22 @@ async function runServer() {
     try {
         await client.connect();
 
+        // Verify Admin
+        const verifyAdmin = async (req, res, next) => {
+            const decodedEmail = req.decoded.email;
+            const result = await userCollection.findOne({
+                email: decodedEmail,
+            });
+            const role = result?.role;
+            // console.log("result", result);
+            if (role === "Admin") {
+                next();
+            } else {
+                return res
+                    .status(403)
+                    .send({ result: false, message: "Forbidden Access" });
+            }
+        };
         // add User in db and create jwt token
         app.put("/user", async (req, res) => {
             const name = req.body.name;
@@ -72,7 +88,7 @@ async function runServer() {
         });
 
         // Update User role
-        app.put("/updateUser", async (req, res) => {
+        app.put("/updateUser", verifyJWT, verifyAdmin, async (req, res) => {
             const user = req.body;
             // console.log(user);
             const filter = { email: user.email };
@@ -87,7 +103,7 @@ async function runServer() {
         });
 
         // Find User
-        app.get("/user", async (req, res) => {
+        app.get("/user", verifyJWT, async (req, res) => {
             const email = req.query.email;
             const filter = { email: email };
             const result = await userCollection.findOne(filter);
@@ -95,21 +111,21 @@ async function runServer() {
         });
 
         // Delete User
-        app.delete("/deleteUser", async (req, res) => {
+        app.delete("/deleteUser", verifyJWT, async (req, res) => {
             const user = req.body;
             // console.log(user);
             const filter = { email: user.email };
             const result = await userCollection.deleteOne(filter);
             res.send({ result });
         });
-
-        app.get("/allUsers", async (req, res) => {
+        // Find All User
+        app.get("/allUsers", verifyJWT, async (req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result);
         });
 
         //  Create a new Product
-        app.post("/addProduct", async (req, res) => {
+        app.post("/addProduct", verifyJWT, verifyAdmin, async (req, res) => {
             const product = req.body;
             const result = await productsCollection.insertOne(product);
             res.send(result);
@@ -122,7 +138,7 @@ async function runServer() {
         });
 
         // Update a Product
-        app.put("/updateProduct", async (req, res) => {
+        app.put("/updateProduct", verifyJWT, verifyAdmin, async (req, res) => {
             const product = req.body;
             const id = req.query.id;
             // console.log(id);
@@ -139,15 +155,22 @@ async function runServer() {
             // console.log(result);
             res.send({ result });
         });
+
         // Delete a Product
-        app.delete("/deleteProduct", async (req, res) => {
-            const id = req.body;
-            const query = { _id: ObjectId(id) };
-            const result = await productsCollection.deleteOne(query);
-            res.send(result);
-        });
+        app.delete(
+            "/deleteProduct",
+            verifyJWT,
+            verifyAdmin,
+            async (req, res) => {
+                const id = req.body;
+                const query = { _id: ObjectId(id) };
+                const result = await productsCollection.deleteOne(query);
+                res.send(result);
+            }
+        );
+
         // Get a Product
-        app.get("/product", async (req, res) => {
+        app.get("/product", verifyJWT, async (req, res) => {
             const id = req.query.id;
             const query = { _id: ObjectId(id) };
             const result = await productsCollection.findOne(query);
@@ -155,7 +178,7 @@ async function runServer() {
         });
 
         // Save Orders
-        app.post("/addOrder", async (req, res) => {
+        app.post("/addOrder", verifyJWT, async (req, res) => {
             const order = req.body;
             const id = order.ProductId;
             const query = { email: order.email, ProductId: id };
@@ -169,7 +192,7 @@ async function runServer() {
         });
 
         // Find All Orders for client
-        app.get("/clientAllOrders", async (req, res) => {
+        app.get("/clientAllOrders", verifyJWT, async (req, res) => {
             const email = req.query.email;
             if (email) {
                 const query = { email: email };
@@ -179,14 +202,14 @@ async function runServer() {
             }
         });
 
-        // Find All Orders for client
-        app.get("/adminAllOrders", async (req, res) => {
+        // Find All Orders for Admin
+        app.get("/adminAllOrders", verifyJWT, verifyAdmin, async (req, res) => {
             const result = await ordersCollection.find().toArray();
             res.send(result);
         });
 
         // Client Delete Order
-        app.delete("/deleteClientProduct", async (req, res) => {
+        app.delete("/deleteClientProduct", verifyJWT, async (req, res) => {
             const id = req.query.id;
             const query = { _id: ObjectId(id) };
             const result = await ordersCollection.deleteOne(query);
